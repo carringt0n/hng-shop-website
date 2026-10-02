@@ -1,0 +1,18 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f7f6f2">
+<title>FORMA â€” Objects for everyday living</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="announcement">COMPLIMENTARY SHIPPING ON ORDERS OVER $150</div>
+<div class="wrap"><header><a href="#" class="brand" style="text-decoration:none;color:inherit">FORMA<small>OBJECTS FOR LIVING</small></a><nav class="nav"><a href="#shop">Shop all</a><a href="#shop" onclick="setCategory('Lighting')">Lighting</a><a href="#shop" onclick="setCategory('Decor')">Decor</a><a href="#about">Our story</a></nav><div class="actions"><button class="iconbtn" aria-label="Account" onclick="location.href='login.html'">â™™</button><button class="iconbtn" aria-label="Orders" onclick="openOrders()">â™¡</button><button class="iconbtn" aria-label="Shopping bag" onclick="openCart()">â™§<span class="badge" id="count">0</span></button></div></header>
+<section class="hero"><div class="hero-copy"><div class="eyebrow">Thoughtfully made, meant to stay</div><h1>Make room for the good things.</h1><p>Considered objects for slower mornings, softer evenings, and all the little moments in between.</p><button class="primary" onclick="document.querySelector('#shop').scrollIntoView({behavior:'smooth'})">EXPLORE THE COLLECTION&nbsp; â†—</button></div><div class="hero-image" role="img" aria-label="A calm, sunlit living room"></div></section>
+<section id="shop"><div class="section-head"><div><div class="eyebrow">The collection</div><h2>Everyday, elevated.</h2></div><span class="category" id="result-count">8 pieces</span></div><div class="filters"><button class="filter active" onclick="setCategory('All',this)">All objects</button><button class="filter" onclick="setCategory('Lighting',this)">Lighting</button><button class="filter" onclick="setCategory('Decor',this)">Decor</button><button class="filter" onclick="setCategory('Textiles',this)">Textiles</button></div><div class="grid" id="products"></div></section>
+<section class="benefits" id="about"><div><strong>Made to last</strong><span>Thoughtful materials, lasting design</span></div><div><strong>Small batch</strong><span>Considered, never overproduced</span></div><div><strong>Easy returns</strong><span>30 days to make it yours</span></div></section><footer><span>Â© 2025 FORMA STUDIO</span><span>Made for the everyday.</span><span>Instagram&nbsp;&nbsp; Â· &nbsp;&nbsp;Pinterest</span></footer></div>
+<div class="overlay" id="overlay" onclick="closePanels()"></div><aside class="drawer" id="drawer"><div class="drawer-top"><h2 id="drawer-title">Your bag <span id="bag-number"></span></h2><button class="close" onclick="closePanels()">Ã—</button></div><div class="cart-items" id="cart-items"></div><div id="cart-bottom"></div></aside>
+<div class="modal" id="modal"><div class="modal-card" id="modal-content"></div></div><div class="toast" id="toast"></div>
+<script src="script.js" defer></script></body></html>
+
+
