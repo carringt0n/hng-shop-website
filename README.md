@@ -1,4 +1,4 @@
-# hng-shopwebsite
+# hng-shop-website
 # FORMA shop
 
 Responsive storefront UI with mock product and order data, plus Google sign-in through Google Identity Services OAuth credentials.
