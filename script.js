@@ -10,7 +10,8 @@ const products = [
 ];
 
 const photo = (id, width = 800) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
-const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+const USD_TO_NGN = 1327.67; // USD/NGN market rate for 2026-10-05
+const money = value => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(value * USD_TO_NGN);
 let cart = JSON.parse(localStorage.getItem('formaCart') || '{}');
 let category = 'All';
 let searchTerm = '';
