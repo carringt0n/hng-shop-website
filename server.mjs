@@ -161,6 +161,7 @@ const staticFiles = {
   '/index.html': 'index.html',
   '/login.html': 'login.html',
   '/styles.css': 'styles.css',
+  '/refinements.css': 'refinements.css',
   '/script.js': 'script.js',
   '/auth.js': 'auth.js',
 };

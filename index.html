@@ -1,18 +1,78 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f7f6f2">
-<title>FORMA â€” Objects for everyday living</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="description" content="Thoughtful home objects for everyday living. Discover lighting, decor and textiles at FORMA.">
+  <title>FORMA — Objects for everyday living</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="refinements.css">
 </head>
 <body>
-<div class="announcement">COMPLIMENTARY SHIPPING ON ORDERS OVER $150</div>
-<div class="wrap"><header><a href="#" class="brand" style="text-decoration:none;color:inherit">FORMA<small>OBJECTS FOR LIVING</small></a><nav class="nav"><a href="#shop">Shop all</a><a href="#shop" onclick="setCategory('Lighting')">Lighting</a><a href="#shop" onclick="setCategory('Decor')">Decor</a><a href="#about">Our story</a></nav><div class="actions"><button class="iconbtn" aria-label="Account" onclick="location.href='login.html'">â™™</button><button class="iconbtn" aria-label="Orders" onclick="openOrders()">â™¡</button><button class="iconbtn" aria-label="Shopping bag" onclick="openCart()">â™§<span class="badge" id="count">0</span></button></div></header>
-<section class="hero"><div class="hero-copy"><div class="eyebrow">Thoughtfully made, meant to stay</div><h1>Make room for the good things.</h1><p>Considered objects for slower mornings, softer evenings, and all the little moments in between.</p><button class="primary" onclick="document.querySelector('#shop').scrollIntoView({behavior:'smooth'})">EXPLORE THE COLLECTION&nbsp; â†—</button></div><div class="hero-image" role="img" aria-label="A calm, sunlit living room"></div></section>
-<section id="shop"><div class="section-head"><div><div class="eyebrow">The collection</div><h2>Everyday, elevated.</h2></div><span class="category" id="result-count">8 pieces</span></div><div class="filters"><button class="filter active" onclick="setCategory('All',this)">All objects</button><button class="filter" onclick="setCategory('Lighting',this)">Lighting</button><button class="filter" onclick="setCategory('Decor',this)">Decor</button><button class="filter" onclick="setCategory('Textiles',this)">Textiles</button></div><div class="grid" id="products"></div></section>
-<section class="benefits" id="about"><div><strong>Made to last</strong><span>Thoughtful materials, lasting design</span></div><div><strong>Small batch</strong><span>Considered, never overproduced</span></div><div><strong>Easy returns</strong><span>30 days to make it yours</span></div></section><footer><span>Â© 2025 FORMA STUDIO</span><span>Made for the everyday.</span><span>Instagram&nbsp;&nbsp; Â· &nbsp;&nbsp;Pinterest</span></footer></div>
-<div class="overlay" id="overlay" onclick="closePanels()"></div><aside class="drawer" id="drawer"><div class="drawer-top"><h2 id="drawer-title">Your bag <span id="bag-number"></span></h2><button class="close" onclick="closePanels()">Ã—</button></div><div class="cart-items" id="cart-items"></div><div id="cart-bottom"></div></aside>
-<div class="modal" id="modal"><div class="modal-card" id="modal-content"></div></div><div class="toast" id="toast"></div>
-<script src="script.js" defer></script></body></html>
+  <div class="announcement"><span>Thoughtful objects for a more considered home</span><span class="announcement-right">Complimentary shipping over $150 <span aria-hidden="true">↗</span></span></div>
+  <header class="site-header wrap">
+    <a class="brand" href="#home" aria-label="Forma home">FORMA<span>OBJECTS FOR LIVING</span></a>
+    <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation" aria-expanded="false" onclick="toggleMenu()"><span></span><span></span></button>
+    <nav class="nav" id="main-nav" aria-label="Main navigation">
+      <a class="nav-link active" href="#home">Home</a>
+      <a class="nav-link" href="#shop" onclick="setCategory('All')">Shop</a>
+      <a class="nav-link" href="#categories">Collections</a>
+      <a class="nav-link" href="#about">Our story</a>
+    </nav>
+    <div class="header-actions">
+      <button class="header-action search-open" aria-label="Search products" onclick="focusSearch()"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg></button>
+      <a class="header-action" href="login.html" aria-label="Sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"></circle><path d="M5.5 20c.7-3.5 3-5.3 6.5-5.3s5.8 1.8 6.5 5.3"></path></svg></a>
+      <button class="header-action" aria-label="View orders" onclick="openOrders()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 8.8c0 5-8.5 10-8.5 10s-8.5-5-8.5-10A4.6 4.6 0 0 1 12 6.1a4.6 4.6 0 0 1 8.5 2.7Z"></path></svg></button>
+      <button class="header-action bag-action" aria-label="Open shopping bag" onclick="openCart()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l1 12H4L5 8Z"></path><path d="M9 9V6a3 3 0 0 1 6 0v3"></path></svg><span class="badge" id="count">0</span></button>
+    </div>
+  </header>
 
+  <main id="home">
+    <section class="hero wrap" aria-label="Featured collection">
+      <div class="hero-image" role="img" aria-label="Warm, sunlit living room with considered furniture and natural textures"></div>
+      <div class="hero-shade"></div>
+      <div class="hero-content"><p class="eyebrow light">A home, thoughtfully made</p><h1>Make space<br>for living.</h1><p class="hero-copy">Objects with a point of view, made to bring a little more meaning to the everyday.</p><a class="button button-light" href="#shop">Explore the collection <span aria-hidden="true">↗</span></a><div class="hero-caption"><span class="hero-index">01</span><span class="caption-line"></span><span>FORM / 2025</span></div></div>
+      <a class="hero-scroll" href="#benefits" aria-label="Scroll to discover">Scroll to discover <span>↓</span></a>
+    </section>
 
+    <section class="benefit-strip wrap" id="benefits" aria-label="Shopping benefits">
+      <div class="benefit"><span class="benefit-icon">↗</span><div><strong>Complimentary delivery</strong><small>On orders over $150</small></div></div>
+      <div class="benefit"><span class="benefit-icon">◇</span><div><strong>Considered quality</strong><small>Made to live with</small></div></div>
+      <div class="benefit"><span class="benefit-icon">↺</span><div><strong>Easy returns</strong><small>30 days to decide</small></div></div>
+      <div class="benefit"><span class="benefit-icon">♡</span><div><strong>Here to help</strong><small>A real person, always</small></div></div>
+    </section>
+
+    <section class="category-section wrap" id="categories">
+      <div class="section-heading"><div><p class="eyebrow">Find your feeling</p><h2>Considered for every corner.</h2></div><a class="text-link" href="#shop" onclick="setCategory('All')">View all objects <span>↗</span></a></div>
+      <div class="category-grid" id="category-grid"></div>
+    </section>
+
+    <section class="editorial wrap" id="about">
+      <div class="editorial-image" role="img" aria-label="A quiet, layered interior"></div>
+      <div class="editorial-copy"><p class="eyebrow light">The FORMA point of view</p><h2>Fewer things.<br>More feeling.</h2><p>We believe the objects we live with should earn their place. Pieces chosen for their material, their shape, and the way they make a room feel like yours.</p><a class="button button-outline-light" href="#shop">A little more about us <span>↗</span></a><span class="editorial-mark">F / 01</span></div>
+    </section>
+
+    <section class="shop-section wrap" id="shop">
+      <div class="section-heading shop-heading"><div><p class="eyebrow">The collection</p><h2>Good things, gathered.</h2></div><p class="shop-intro">Everyday pieces with lasting presence.</p></div>
+      <div class="shop-toolbar"><div class="filters" role="group" aria-label="Filter products by category"><button class="filter active" data-category="All" onclick="setCategory('All',this)">All objects</button><button class="filter" data-category="Lighting" onclick="setCategory('Lighting',this)">Lighting</button><button class="filter" data-category="Decor" onclick="setCategory('Decor',this)">Decor</button><button class="filter" data-category="Textiles" onclick="setCategory('Textiles',this)">Textiles</button></div><div class="shop-controls"><label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg><input id="product-search" type="search" placeholder="Find an object" aria-label="Search products" oninput="setSearch(this.value)"><button id="clear-search" aria-label="Clear search" onclick="clearSearch()">×</button></label><select id="sort-products" aria-label="Sort products" onchange="setSort(this.value)"><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name: A to Z</option></select></div></div>
+      <div class="result-row"><span id="result-count">8 objects</span><span>Made for everyday living</span></div>
+      <div class="product-grid" id="products" aria-live="polite"></div>
+      <div class="shop-more"><span>Thoughtful objects, chosen to stay.</span><a class="text-link" href="#home">Back to top ↑</a></div>
+    </section>
+
+    <section class="closing-banner wrap"><div><p class="eyebrow light">A quieter kind of home</p><h2>Live with what<br>you love.</h2><a class="button button-light" href="#shop">Find your piece <span>↗</span></a></div><div class="closing-image" role="img" aria-label="Warm modern furniture in a calm interior"></div></section>
+  </main>
+
+  <footer class="site-footer"><div class="wrap footer-main"><div class="footer-brand"><a class="brand" href="#home">FORMA<span>OBJECTS FOR LIVING</span></a><p>Thoughtful objects for a more considered home.</p><div class="social-links"><a href="#" aria-label="Instagram">ig</a><a href="#" aria-label="Pinterest">p</a></div></div><div class="footer-column"><h3>Explore</h3><a href="#shop">All objects</a><a href="#categories">Collections</a><a href="#about">Our story</a></div><div class="footer-column"><h3>Care</h3><a href="#benefits">Delivery & returns</a><a href="login.html">Your account</a><button onclick="openOrders()">Order history</button></div><div class="footer-note"><p class="eyebrow">Stay in the loop</p><p>Occasional notes from our corner of the world.</p><form class="newsletter" onsubmit="event.preventDefault();toast('Newsletter sign-up is not connected yet')"><label class="sr-only" for="newsletter-email">Email address</label><input id="newsletter-email" type="email" placeholder="Your email address" required><button aria-label="Subscribe">↗</button></form></div></div><div class="wrap footer-bottom"><span>© 2025 FORMA STUDIO</span><span>Made for the everyday.</span><a href="#home">Back to top ↑</a></div></footer>
+
+  <div class="overlay" id="overlay" onclick="closePanels()"></div>
+  <aside class="drawer" id="drawer" aria-labelledby="drawer-title" aria-hidden="true"><div class="drawer-top"><div><p class="eyebrow">A few good things</p><h2 id="drawer-title">Your bag <span id="bag-number"></span></h2></div><button class="close" aria-label="Close bag" onclick="closePanels()">×</button></div><div class="cart-items" id="cart-items"></div><div id="cart-bottom"></div></aside>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Details"><div class="modal-card" id="modal-content"></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js" defer></script>
+</body>
+</html>
