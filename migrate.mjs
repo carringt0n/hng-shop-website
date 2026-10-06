@@ -21,12 +21,15 @@ if (['allow', 'prefer', 'require'].includes(connectionUrl.searchParams.get('sslm
 const pool = new pg.Pool({ connectionString: connectionUrl.toString(), connectionTimeoutMillis: 10000 });
 let client;
 try {
-  const sql = await readFile(resolve('migrations/001_google_user_identity.sql'), 'utf8');
+  const migrationFiles = ['001_google_user_identity.sql', '002_shared_cart_orders.sql'];
   client = await pool.connect();
   await client.query('BEGIN');
-  await client.query(sql);
+  for (const filename of migrationFiles) {
+    const sql = await readFile(resolve('migrations', filename), 'utf8');
+    await client.query(sql);
+  }
   await client.query('COMMIT');
-  console.log('Google user identity migration applied.');
+  console.log('Shop database migrations applied.');
 } catch (error) {
   if (client) await client.query('ROLLBACK').catch(() => {});
   console.error(`Google user identity migration failed (${error.code || error.name}).`);

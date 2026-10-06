@@ -1,0 +1,75 @@
+{
+  "currency": "NGN",
+  "exchangeRate": {
+    "base": "USD",
+    "quote": "NGN",
+    "rate": 1327.67,
+    "asOf": "2026-10-05"
+  },
+  "products": [
+    {
+      "id": 1,
+      "name": "Form No. 01 Table Lamp",
+      "category": "Lighting",
+      "price": 196495,
+      "tag": "Bestseller",
+      "img": "photo-1507473885765-e6ed057f782c"
+    },
+    {
+      "id": 2,
+      "name": "Arc Sculptural Vase",
+      "category": "Decor",
+      "price": 114180,
+      "tag": "New",
+      "img": "photo-1578500494198-246f612d3b3d"
+    },
+    {
+      "id": 3,
+      "name": "Sunday Throw",
+      "category": "Textiles",
+      "price": 164631,
+      "tag": "",
+      "img": "photo-1600210492486-724fe5c67fb0"
+    },
+    {
+      "id": 4,
+      "name": "Pebble Catchall",
+      "category": "Decor",
+      "price": 55762,
+      "tag": "",
+      "img": "photo-1610701596007-11502861dcfa"
+    },
+    {
+      "id": 5,
+      "name": "Sol Pendant Light",
+      "category": "Lighting",
+      "price": 292087,
+      "tag": "Small batch",
+      "img": "photo-1507473885765-e6ed057f782c"
+    },
+    {
+      "id": 6,
+      "name": "Linen Cushion Cover",
+      "category": "Textiles",
+      "price": 90282,
+      "tag": "",
+      "img": "photo-1584100936595-c0654b55a2e2"
+    },
+    {
+      "id": 7,
+      "name": "Forma Ceramic Bowl",
+      "category": "Decor",
+      "price": 71694,
+      "tag": "",
+      "img": "photo-1490312278390-ab64016e0aa9"
+    },
+    {
+      "id": 8,
+      "name": "Dusk Bedside Light",
+      "category": "Lighting",
+      "price": 233670,
+      "tag": "Bestseller",
+      "img": "photo-1507473885765-e6ed057f782c"
+    }
+  ]
+}

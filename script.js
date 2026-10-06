@@ -1,25 +1,75 @@
-const products = [
-  { id: 1, name: 'Form No. 01 Table Lamp', category: 'Lighting', price: 148, tag: 'Bestseller', img: 'photo-1507473885765-e6ed057f782c' },
-  { id: 2, name: 'Arc Sculptural Vase', category: 'Decor', price: 86, tag: 'New', img: 'photo-1578500494198-246f612d3b3d' },
-  { id: 3, name: 'Sunday Throw', category: 'Textiles', price: 124, tag: '', img: 'photo-1600210492486-724fe5c67fb0' },
-  { id: 4, name: 'Pebble Catchall', category: 'Decor', price: 42, tag: '', img: 'photo-1610701596007-11502861dcfa' },
-  { id: 5, name: 'Sol Pendant Light', category: 'Lighting', price: 220, tag: 'Small batch', img: 'photo-1507473885765-e6ed057f782c' },
-  { id: 6, name: 'Linen Cushion Cover', category: 'Textiles', price: 68, tag: '', img: 'photo-1584100936595-c0654b55a2e2' },
-  { id: 7, name: 'Forma Ceramic Bowl', category: 'Decor', price: 54, tag: '', img: 'photo-1490312278390-ab64016e0aa9' },
-  { id: 8, name: 'Dusk Bedside Light', category: 'Lighting', price: 176, tag: 'Bestseller', img: 'photo-1507473885765-e6ed057f782c' },
-];
+let products = [];
 
 const photo = (id, width = 800) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
-const USD_TO_NGN = 1327.67; // USD/NGN market rate for 2026-10-05
-const money = value => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(value * USD_TO_NGN);
+const USD_TO_NGN = 1327.67; // Historical USD demo-order conversion retained for browser-local orders
+const moneyFormatter = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 });
+const money = (value, currency = 'NGN') => moneyFormatter.format(currency === 'USD' ? value * USD_TO_NGN : value);
 let cart = JSON.parse(localStorage.getItem('formaCart') || '{}');
 let category = 'All';
 let searchTerm = '';
 let sortOrder = 'featured';
+let signedInUser = null;
+let sharedCartActive = false;
+let cartSyncQueue = Promise.resolve();
 
 function save() {
   localStorage.setItem('formaCart', JSON.stringify(cart));
   document.getElementById('count').textContent = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
+}
+
+async function loadStorefront() {
+  try {
+    const response = await fetch('/api/products', { cache: 'no-store' });
+    if (!response.ok) throw new Error('products');
+    const payload = await response.json();
+    products = payload.products || [];
+    renderCategories();
+    renderProducts();
+    const authResponse = await fetch('/auth/me', { credentials: 'same-origin', cache: 'no-store' });
+    const auth = authResponse.ok ? await authResponse.json() : { authenticated: false };
+    if (auth.authenticated) {
+      signedInUser = auth.user;
+      const cartResponse = await fetch('/api/cart', { credentials: 'same-origin', cache: 'no-store' });
+      if (!cartResponse.ok) throw new Error('cart');
+      const serverData = await cartResponse.json();
+      const merged = Object.fromEntries((serverData.items || []).map(item => [String(item.productId), item.quantity]));
+      const guest = { ...cart };
+      for (const [id, amount] of Object.entries(guest)) merged[id] = Math.min(99, (merged[id] || 0) + amount);
+      cart = merged;
+      sharedCartActive = true;
+      save();
+      for (const [id, amount] of Object.entries(guest)) {
+        const result = await fetch('/api/cart/items/' + encodeURIComponent(id), { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantity: cart[id] || amount }) });
+        if (!result.ok) throw new Error('cart-write');
+      }
+    }
+    save();
+    renderCart();
+  } catch (error) {
+    if (error.message === 'products') toast('The catalogue could not be loaded. Please refresh.');
+    else if (error.message === 'cart' || error.message === 'cart-write') toast('Cart sync is unavailable. Apply the shop database migration first.');
+  }
+}
+
+async function refreshSharedCart() {
+  if (!sharedCartActive) return;
+  try {
+    const response = await fetch('/api/cart', { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) return;
+    const payload = await response.json();
+    cart = Object.fromEntries((payload.items || []).map(item => [String(item.productId), item.quantity]));
+    save();
+    renderCart();
+  } catch { /* Keep the last local snapshot until the server is reachable. */ }
+}
+
+function queueCartWrite(id) {
+  if (!sharedCartActive) return;
+  const quantity = Number(cart[id] || 0);
+  cartSyncQueue = cartSyncQueue.then(async () => {
+    const response = await fetch('/api/cart/items/' + encodeURIComponent(id), { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantity }) });
+    if (!response.ok) throw new Error('Cart could not be saved.');
+  }).catch(() => toast('Cart changes could not be synced. Please try again.'));
 }
 
 function renderCategories() {
@@ -104,22 +154,26 @@ function toggleMenu() {
 }
 
 function add(id) {
+  if ((cart[id] || 0) >= 99) return toast('Maximum quantity reached');
   cart[id] = (cart[id] || 0) + 1;
   save();
+  queueCartWrite(id);
   toast('Added to your bag');
   renderCart();
 }
 
 function change(id, amount) {
-  cart[id] = (cart[id] || 0) + amount;
+  cart[id] = Math.min(99, (cart[id] || 0) + amount);
   if (cart[id] <= 0) delete cart[id];
   save();
+  queueCartWrite(id);
   renderCart();
 }
 
 function removeItem(id) {
   delete cart[id];
   save();
+  queueCartWrite(id);
   renderCart();
 }
 
@@ -187,12 +241,22 @@ function openProduct(id) {
     <div class="product-detail"><img src="${photo(product.img, 1000)}" alt="${product.name}"><div class="product-detail-info"><p class="eyebrow">${product.category}</p><h2>${product.name}</h2><div class="detail-price">${money(product.price)}</div>${product.tag ? `<span class="detail-tag">${product.tag}</span>` : ''}<p class="modal-description">A considered object from the FORMA collection, chosen for the everyday.</p><button class="checkout" onclick="add(${product.id});closePanels()">ADD TO BAG <span aria-hidden="true">+</span></button></div></div>`);
 }
 
-function openOrders() {
-  const orders = JSON.parse(localStorage.getItem('formaOrders') || '[]');
+async function openOrders() {
+  let orders;
+  if (signedInUser) {
+    try {
+      const response = await fetch('/api/orders', { credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) throw new Error('orders');
+      orders = (await response.json()).orders || [];
+    } catch { return toast('Order history is unavailable. Apply the shop database migration first.'); }
+  } else orders = JSON.parse(localStorage.getItem('formaOrders') || '[]');
   const list = orders.length
-    ? orders.map(order => `<div class="account-order"><strong>${order.id}</strong><span>${order.date} · ${order.status} · ${money(order.total)}</span></div>`).join('')
+    ? orders.map(order => {
+        const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-NG') : order.date;
+        return `<div class="account-order"><strong>${order.id}</strong><span>${date} ? ${order.status} ? ${money(order.total, order.currency || 'USD')}</span></div>`;
+      }).join('')
     : '<div class="empty"><b>No orders just yet.</b>Your next favourite is waiting.</div>';
-  showModal(`<button class="close modal-x" aria-label="Close orders" onclick="closePanels()">×</button><p class="eyebrow">Your account</p><h2>Your orders.</h2><p>Order history saved on this device.</p>${list}<a class="button button-dark" href="login.html">Sign in to your account <span>↗</span></a>`);
+  showModal(`<button class="close modal-x" aria-label="Close orders" onclick="closePanels()">?</button><p class="eyebrow">Your account</p><h2>Your orders.</h2><p>Orders are saved to your Forma account.</p>${list}<a class="button button-dark" href="login.html">Sign in to your account <span>?</span></a>`);
 }
 
 function openCheckout() {
@@ -203,13 +267,30 @@ function openCheckout() {
   const subtotal = rows.reduce((sum, row) => sum + row.product.price * row.quantity, 0);
   const lines = rows.map(({ product, quantity }) => `<div class="checkout-line"><span>${product.name} <b>× ${quantity}</b></span><span>${money(product.price * quantity)}</span></div>`).join('');
   showModal(`<div class="checkout-card"><div class="checkout-header"><div><p class="eyebrow">The final details</p><h2>Checkout preview</h2></div><button class="close" aria-label="Close checkout" onclick="closePanels()">×</button></div>
-    <div class="checkout-content"><form class="checkout-form" id="checkout-form" onsubmit="finishCheckout(event)"><h3>Where should we send it?</h3><label for="checkout-name">Full name</label><input id="checkout-name" name="name" autocomplete="name" placeholder="Your name" required><label for="checkout-email">Email address</label><input id="checkout-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><label for="checkout-address">Street address</label><input id="checkout-address" name="address" autocomplete="street-address" placeholder="Address" required><div class="field-row"><div><label for="checkout-city">City</label><input id="checkout-city" name="city" autocomplete="address-level2" placeholder="City" required></div><div><label for="checkout-postal">Postal code</label><input id="checkout-postal" name="postal" autocomplete="postal-code" placeholder="Postal code" required></div></div><p class="checkout-disclaimer">This checkout is a UI preview. Payment and order creation are not connected, and no order will be placed.</p><button class="checkout" type="submit">CONTINUE <span aria-hidden="true">↗</span></button></form><aside class="checkout-summary"><p class="eyebrow">A little recap</p><h3>Your bag</h3>${lines}<div class="checkout-line"><span>Delivery</span><span>Calculated later</span></div><div class="checkout-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div></aside></div></div>`, 'checkout-modal');
+    <div class="checkout-content"><form class="checkout-form" id="checkout-form" onsubmit="finishCheckout(event)"><h3>Where should we send it?</h3><label for="checkout-name">Full name</label><input id="checkout-name" name="name" autocomplete="name" placeholder="Your name" required><label for="checkout-email">Email address</label><input id="checkout-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><label for="checkout-address">Street address</label><input id="checkout-address" name="address" autocomplete="street-address" placeholder="Address" required><div class="field-row"><div><label for="checkout-city">City</label><input id="checkout-city" name="city" autocomplete="address-level2" placeholder="City" required></div><div><label for="checkout-postal">Postal code</label><input id="checkout-postal" name="postal" autocomplete="postal-code" placeholder="Postal code" required></div></div><p class="checkout-disclaimer">Orders are recorded to your account. Payment is not connected in this preview.</p><button class="checkout" type="submit">CONTINUE <span aria-hidden="true">↗</span></button></form><aside class="checkout-summary"><p class="eyebrow">A little recap</p><h3>Your bag</h3>${lines}<div class="checkout-line"><span>Delivery</span><span>Calculated later</span></div><div class="checkout-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div></aside></div></div>`, 'checkout-modal');
 }
 
-function finishCheckout(event) {
+async function finishCheckout(event) {
   event.preventDefault();
-  toast('Checkout is a preview — no order has been placed');
-  closePanels();
+  if (!signedInUser || !sharedCartActive) return toast('Sign in with Google before placing an order.');
+  const form = event.currentTarget;
+  const fields = Object.fromEntries(new FormData(form).entries());
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/checkout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: fields.name, email: fields.email, address: fields.address, city: fields.city, postal: fields.postal }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Order could not be recorded.');
+    cart = {};
+    localStorage.setItem('formaCart', '{}');
+    save();
+    renderCart();
+    closePanels();
+    toast('Order ' + result.order.id + ' recorded. No payment was taken.');
+  } catch (error) {
+    button.disabled = false;
+    toast(error.message || 'Checkout is unavailable.');
+  }
 }
 
 document.addEventListener('keydown', event => {
@@ -218,5 +299,6 @@ document.addEventListener('keydown', event => {
 
 document.getElementById('clear-search').hidden = true;
 save();
-renderCategories();
-renderProducts();
+loadStorefront();
+window.addEventListener('focus', refreshSharedCart);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshSharedCart(); });

@@ -1,28 +1,32 @@
-# hng-shop-website
 # FORMA shop
 
-Responsive storefront UI with mock product and order data, plus Google sign-in through Google Identity Services OAuth credentials.
+Responsive furniture and home-object storefront with a Google sign-in server, Supabase Postgres persistence, and a separate Expo mobile app in `mobile/`.
 
-## Run locally
+## Existing web app
 
-1. Copy `.env.example` to `.env` and add the Web application OAuth client ID and client secret from Google Cloud Console. Keep `.env` private; it is ignored by Git.
-2. In the Google Cloud Console OAuth client, add `http://localhost:3000` under **Authorized JavaScript origins** and `http://localhost:3000/auth/google/callback` under **Authorized redirect URIs**.
-3. Apply the additive Google identity column/index to the existing `public.users` table:
+The website is plain HTML, CSS, and JavaScript served by `server.mjs` (Node.js 20 or newer). It keeps the existing catalogue and uses a browser-local cart for guests. Signed-in users share their cart and order history with mobile through the server API. Google OAuth credentials and the Supabase database connection are read from the root `.env`; keep that file private.
 
-   ```sh
-   npm run db:migrate
-   ```
+To apply the idempotent user/cart/order migrations and start the website:
 
-4. Start the app with Node.js 20 or newer:
+```sh
+npm run db:migrate
+npm start
+```
 
-   ```sh
-   npm start
-   ```
+Open `http://localhost:3000`. The root `.env.example` lists the required Google and Supabase settings. For production, set `APP_BASE_URL` to the HTTPS origin and register its `/auth/google/callback` URI in the Google Web OAuth client.
 
-5. Open `http://localhost:3000/login.html`.
+## Mobile app
 
-For a deployed site, set `APP_BASE_URL` to its HTTPS origin and register `${APP_BASE_URL}/auth/google/callback` as an authorized redirect URI. Register the exact origin under Authorized JavaScript origins as well.
+See [mobile/README.md](mobile/README.md) for Expo setup, physical-phone networking, Google OAuth handoff, and shared-cart checks. The app calls the same backend; it does not contain server credentials. Checkout records a mock order with no payment collection.
 
-Google sign-in exchanges the authorization code on the server, verifies the Google ID token signature, issuer, audience, expiry, and nonce, then upserts the user's Google ID, email, and name into `public.users` before issuing an HttpOnly session cookie. Email/password sign-in, checkout, and orders remain mock UI. Sessions are held in memory and are cleared when the server restarts, so use a persistent session store before running multiple server instances or relying on production sessions.
+## API endpoints
 
-The database connection uses TLS. To verify the Supabase server certificate as well as encrypting traffic, download the project CA certificate from Supabase **Database Settings → SSL Configuration** and configure the connection string with `sslmode=verify-full` and `sslrootcert` pointing to that certificate.
+- `GET /api/products` ? shared NGN catalogue.
+- `GET /api/cart` ? authenticated server-side cart.
+- `PUT /api/cart/items/:productId` ? set a cart quantity (zero removes).
+- `DELETE /api/cart` ? clear the cart.
+- `GET /api/orders` ? authenticated order history.
+- `POST /api/checkout` ? record a mock order from the cart; no payment is collected.
+- `GET /auth/google`, `GET /auth/google/callback`, `GET /auth/me`, `POST /auth/logout` ? existing web Google login and session endpoints.
+
+Web sessions and native bearer sessions are currently held in server memory and expire after 24 hours; a server restart invalidates them. Cart and order records persist in Supabase.

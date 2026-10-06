@@ -27,6 +27,7 @@ async function loadEnv() {
 
 await loadEnv();
 const { saveGoogleUser } = await import('./database.mjs');
+const { handleApi } = await import('./api.mjs');
 
 const clientId = process.env.GOOGLE_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -44,6 +45,7 @@ const redirectUri = `${baseUrl}/auth/google/callback`;
 const secureCookies = appBase.protocol === 'https:';
 const states = new Map();
 const sessions = new Map();
+const mobileCodes = new Map();
 let signingKeys;
 let signingKeysExpireAt = 0;
 
@@ -114,6 +116,48 @@ function redirect(response, location, headers = {}) {
   response.end();
 }
 
+function sessionIdFromRequest(request) {
+  const header = request.headers.authorization || '';
+  const match = header.match(/^Bearer ([A-Za-z0-9_-]{40,100})$/i);
+  return match ? match[1] : parseCookies(request).forma_session;
+}
+
+function getSession(request) {
+  const sessionId = sessionIdFromRequest(request);
+  const session = sessionId && sessions.get(sessionId);
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) { sessions.delete(sessionId); return null; }
+  return session;
+}
+
+function isAllowedMobileRedirect(raw) {
+  try {
+    const target = new URL(raw);
+    if (target.username || target.password || target.search || target.hash) return false;
+    if (target.protocol === 'forma:' && target.hostname === 'oauth' && target.pathname === '/callback') return true;
+    const parts = target.hostname.split('.').map(Number);
+    const privateHost = parts.length === 4 && parts.every(part => Number.isInteger(part) && part >= 0 && part <= 255) &&
+      (parts[0] === 10 || parts[0] === 127 || (parts[0] === 192 && parts[1] === 168) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31));
+    return process.env.NODE_ENV !== 'production' && target.protocol === 'exp:' && privateHost && target.port === '8081' && target.pathname === '/--/auth/callback';
+  } catch { return false; }
+}
+
+function redirectMobile(response, pending, params = {}) {
+  const target = new URL(pending.redirectUri);
+  for (const [key, value] of Object.entries(params)) target.searchParams.set(key, value);
+  target.searchParams.set('state', pending.appState);
+  return redirect(response, target.toString(), { 'Set-Cookie': cookie('forma_oauth_state', '', 0) });
+}
+
+async function readJsonBody(request) {
+  let raw = '';
+  for await (const chunk of request) {
+    raw += chunk;
+    if (raw.length > 16000) throw new Error('Request body is too large.');
+  }
+  try { return raw ? JSON.parse(raw) : {}; } catch { throw new Error('Invalid JSON request.'); }
+}
+
 async function handleCallback(request, response, url) {
   const params = url.searchParams;
   const state = params.get('state');
@@ -121,11 +165,14 @@ async function handleCallback(request, response, url) {
   const pending = state && states.get(state);
   if (!pending || cookies.forma_oauth_state !== state || Date.now() - pending.createdAt > 10 * 60 * 1000) {
     states.delete(state);
+    if (pending?.client === 'mobile') return redirectMobile(response, pending, { error: 'state' });
     return redirect(response, '/login.html?auth_error=state', { 'Set-Cookie': cookie('forma_oauth_state', '', 0) });
   }
   states.delete(state);
   const clearState = cookie('forma_oauth_state', '', 0);
-  if (params.has('error')) return redirect(response, '/login.html?auth_error=cancelled', { 'Set-Cookie': clearState });
+  if (params.has('error')) return pending.client === 'mobile'
+    ? redirectMobile(response, pending, { error: 'cancelled' })
+    : redirect(response, '/login.html?auth_error=cancelled', { 'Set-Cookie': clearState });
 
   try {
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -144,14 +191,20 @@ async function handleCallback(request, response, url) {
     const tokens = await tokenResponse.json();
     if (!tokenResponse.ok || !tokens.id_token) throw new Error('Google authorization code exchange failed.');
     const user = await verifyGoogleIdToken(tokens.id_token, pending.nonce);
-    await saveGoogleUser(user);
+    const savedUser = await saveGoogleUser(user);
+    if (pending.client === 'mobile') {
+      const code = randomBytes(32).toString('base64url');
+      mobileCodes.set(code, { user, userId: String(savedUser.id), appState: pending.appState, expiresAt: Date.now() + 60 * 1000 });
+      return redirectMobile(response, pending, { code });
+    }
     const sessionId = randomBytes(32).toString('base64url');
-    sessions.set(sessionId, { user, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+    sessions.set(sessionId, { user, userId: String(savedUser.id), expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
     redirect(response, '/login.html?login=success', {
       'Set-Cookie': [clearState, cookie('forma_session', sessionId, 24 * 60 * 60)],
     });
   } catch (error) {
     console.error('Google sign-in failed:', error.message);
+    if (pending.client === 'mobile') return redirectMobile(response, pending, { error: 'google' });
     redirect(response, '/login.html?auth_error=google', { 'Set-Cookie': clearState });
   }
 }
@@ -171,11 +224,17 @@ const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, baseUrl);
     if (request.method === 'GET' && url.pathname === '/auth/google') {
+      const client = url.searchParams.get('client') || 'web';
+      const mobileRedirectUri = url.searchParams.get('redirect_uri') || '';
+      const appState = url.searchParams.get('app_state') || '';
+      if (!['web', 'mobile'].includes(client) || (client === 'mobile' && (!isAllowedMobileRedirect(mobileRedirectUri) || !/^[A-Za-z0-9._~-]{16,128}$/.test(appState)))) {
+        return sendJson(response, 400, { error: 'Invalid sign-in client or redirect.' });
+      }
       const state = randomBytes(32).toString('base64url');
       const nonce = randomBytes(32).toString('base64url');
       const codeVerifier = randomBytes(32).toString('base64url');
       const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
-      states.set(state, { nonce, codeVerifier, createdAt: Date.now() });
+      states.set(state, { nonce, codeVerifier, createdAt: Date.now(), client, redirectUri: client === 'mobile' ? mobileRedirectUri : '', appState });
       const authorizationUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authorizationUrl.search = new URLSearchParams({
         client_id: clientId,
@@ -190,15 +249,30 @@ const server = createServer(async (request, response) => {
       return redirect(response, authorizationUrl.toString(), { 'Set-Cookie': cookie('forma_oauth_state', state, 600) });
     }
     if (request.method === 'GET' && url.pathname === '/auth/google/callback') return await handleCallback(request, response, url);
+    if (request.method === 'POST' && url.pathname === '/auth/mobile/exchange') {
+      const input = await readJsonBody(request);
+      const handoff = typeof input.code === 'string' ? mobileCodes.get(input.code) : null;
+      if (!handoff || handoff.expiresAt <= Date.now() || handoff.appState !== input.state) {
+        if (typeof input.code === 'string') mobileCodes.delete(input.code);
+        return sendJson(response, 401, { error: 'Sign-in handoff is invalid or expired.' });
+      }
+      mobileCodes.delete(input.code);
+      const accessToken = randomBytes(32).toString('base64url');
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      sessions.set(accessToken, { user: handoff.user, userId: handoff.userId, expiresAt });
+      return sendJson(response, 200, { accessToken, expiresAt, user: handoff.user });
+    }
     if (request.method === 'GET' && url.pathname === '/auth/me') {
-      const session = sessions.get(parseCookies(request).forma_session);
-      if (!session || session.expiresAt <= Date.now()) return sendJson(response, 200, { authenticated: false });
+      const session = getSession(request);
+      if (!session) return sendJson(response, 200, { authenticated: false });
       return sendJson(response, 200, { authenticated: true, user: session.user });
     }
     if (request.method === 'POST' && url.pathname === '/auth/logout') {
-      sessions.delete(parseCookies(request).forma_session);
+      const sessionId = sessionIdFromRequest(request);
+      if (sessionId) sessions.delete(sessionId);
       return sendJson(response, 200, { ok: true }, { 'Set-Cookie': cookie('forma_session', '', 0) });
     }
+    if (await handleApi(request, response, getSession(request))) return;
     if (request.method !== 'GET' || !staticFiles[url.pathname]) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' });
       return response.end('Not found');
@@ -223,6 +297,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [state, pending] of states) if (now - pending.createdAt > 10 * 60 * 1000) states.delete(state);
   for (const [sessionId, session] of sessions) if (session.expiresAt <= now) sessions.delete(sessionId);
+  for (const [code, handoff] of mobileCodes) if (handoff.expiresAt <= now) mobileCodes.delete(code);
 }, 60 * 60 * 1000).unref();
 
 server.listen(port, () => console.log(`FORMA shop running at ${baseUrl}`));
