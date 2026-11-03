@@ -21,6 +21,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "forma"
+    "scheme": "forma",
+    "plugins": [
+      "expo-web-browser",
+      "expo-secure-store"
+    ]
   }
 }

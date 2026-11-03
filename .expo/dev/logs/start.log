@@ -1,0 +1,7 @@
+{"_e":"root:init","_t":1791738880107,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1791738880175,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1791738880195,"mode":"development","files":["../..\\..\\.env"],"env":{"APP_BASE_URL":"http://localhost:3000","GOOGLE_CLIENT_ID":"1021062548816-luv174d4us71bosk87u8h1965pmvrlbm.apps.googleusercontent.com","GOOGLE_CLIENT_SECRET":"GOCSPL-3zWyS90l-8maDlXWhFs0096-On4n","PORT":"3000","SUPABASE_DATABASE_CONNECTION_STRING":"postgresql://postgres:[Carrington2003]@db.pykjdttinjnroyfaczrs.supabase.co:5432/postgres","SUPABASE_DATABASE_PASSWORD":"Carrington2003"}}
+{"_e":"devserver:start","_t":1791738884128,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1791738893128,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"metro:server_log","_t":1791738897712,"level":"warn","data":["Failed to download the latest version of React Native DevTools. Using a fallback version instead. Connect to the internet or check your network settings."]}
+{"_e":"expo:dev-tools-plugin:load","_t":1791738900982,"plugins":[]}

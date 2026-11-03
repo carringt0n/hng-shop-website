@@ -189,7 +189,10 @@ async function handleCallback(request, response, url) {
       signal: AbortSignal.timeout(15000),
     });
     const tokens = await tokenResponse.json();
-    if (!tokenResponse.ok || !tokens.id_token) throw new Error('Google authorization code exchange failed.');
+    if (!tokenResponse.ok || !tokens.id_token) {
+      console.error('Google token exchange response:', tokenResponse.status, tokens.error || 'missing_id_token', tokens.error_description || '');
+      throw new Error('Google authorization code exchange failed.');
+    }
     const user = await verifyGoogleIdToken(tokens.id_token, pending.nonce);
     const savedUser = await saveGoogleUser(user);
     if (pending.client === 'mobile') {
@@ -199,7 +202,7 @@ async function handleCallback(request, response, url) {
     }
     const sessionId = randomBytes(32).toString('base64url');
     sessions.set(sessionId, { user, userId: String(savedUser.id), expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
-    redirect(response, '/login.html?login=success', {
+    redirect(response, '/', {
       'Set-Cookie': [clearState, cookie('forma_session', sessionId, 24 * 60 * 60)],
     });
   } catch (error) {

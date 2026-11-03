@@ -1,10 +1,10 @@
 const form = document.getElementById('auth-form');
-const status = document.getElementById('auth-status');
+const authStatus = document.getElementById('auth-status');
 const googleButton = document.getElementById('google-signin');
 let signup = false;
 
 function mockMessage(message) {
-  status.textContent = message;
+  authStatus.textContent = message;
 }
 
 function toggleSignup(enabled) {
@@ -49,7 +49,7 @@ async function showSession() {
     document.querySelector('.auth-divider').hidden = true;
     form.hidden = true;
     document.getElementById('auth-switch').hidden = true;
-    status.textContent = 'Your Forma sign-in is ready.';
+    authStatus.textContent = 'Your Forma sign-in is ready.';
     const signOut = document.createElement('button');
     signOut.className = 'primary';
     signOut.type = 'button';
